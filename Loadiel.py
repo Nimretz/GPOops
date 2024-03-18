@@ -32,7 +32,7 @@ with open(json_file_path, 'r') as file:
 # Neo4j Connection
 print("[+] Starting update neo4j aka your bloodhound...")
 try:
-    graph=Graph("bolt://localhost:7687", auth=("neo4j", "mefager922"))
+    graph=Graph("bolt://localhost:7687", auth=("neo4j", "neo4j"))
     print("[+] Connect to Neo4j server: bolt://localhost:7687  (neo4j)")
     matcher=NodeMatcher(graph)
 except Exception as e:
