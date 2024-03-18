@@ -1,0 +1,7 @@
+C:\Users\SMASH\source\repos\GPOops\GPOops\obj\Debug\GPOops.csproj.AssemblyReference.cache
+C:\Users\SMASH\source\repos\GPOops\GPOops\obj\Debug\GPOops.csproj.CoreCompileInputs.cache
+C:\Users\SMASH\source\repos\GPOops\GPOops\bin\Debug\GPOops.exe.config
+C:\Users\SMASH\source\repos\GPOops\GPOops\bin\Debug\GPOops.exe
+C:\Users\SMASH\source\repos\GPOops\GPOops\bin\Debug\GPOops.pdb
+C:\Users\SMASH\source\repos\GPOops\GPOops\obj\Debug\GPOops.exe
+C:\Users\SMASH\source\repos\GPOops\GPOops\obj\Debug\GPOops.pdb

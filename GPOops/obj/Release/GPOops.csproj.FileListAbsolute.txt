@@ -1,0 +1,11 @@
+C:\Tools\GPOops\GPOops\bin\Release\GPOops.exe.config
+C:\Tools\GPOops\GPOops\bin\Release\GPOops.exe
+C:\Tools\GPOops\GPOops\bin\Release\GPOops.pdb
+C:\Tools\GPOops\GPOops\obj\Release\GPOops.csproj.AssemblyReference.cache
+C:\Tools\GPOops\GPOops\obj\Release\GPOops.csproj.SuggestedBindingRedirects.cache
+C:\Tools\GPOops\GPOops\obj\Release\GPOops.csproj.CoreCompileInputs.cache
+C:\Tools\GPOops\GPOops\obj\Release\GPOops.exe
+C:\Tools\GPOops\GPOops\obj\Release\GPOops.pdb
+C:\Tools\GPOops\GPOops\bin\Release\Newtonsoft.Json.dll
+C:\Tools\GPOops\GPOops\bin\Release\Newtonsoft.Json.xml
+C:\Tools\GPOops\GPOops\obj\Release\GPOops.csproj.CopyComplete
