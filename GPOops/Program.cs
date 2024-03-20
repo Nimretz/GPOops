@@ -89,43 +89,6 @@ namespace GPOops
             }
         }
 
-        /*
-        public static void Tivdoki (string filelocation)
-        {
-            string filename = "";
-            try
-            {
-                string pattern = @"([^\\\/]+)$";
-                Match match = Regex.Match(filelocation, pattern);
-                if (match.Success)
-                {
-                    filename = match.Groups[1].Value;
-                }
-
-            }
-            catch
-            {
-                Console.WriteLine("[X] Regex failed");
-            }
-            if (FileExists(filelocation))
-            {
-                Console.WriteLine("[*] Analyzing " + filename + "in: " + filelocation);
-                try
-                {
-                    var text = ReadFile(filelocation);
-
-                    Console.WriteLine("[*] " + filename + "\n\n" + text);
-                    GPTParsush(text);
-
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine("[X] Cannot analyze " + filename + " Error message: " + ex);
-                }
-            }
-            else { Console.WriteLine("[X] Cannot find the " + filename + " File"); }
-        }
-        */
         public static void GPTParsush(List<string> content)
         {
             string[] privileges = new string[] { "SeBackupPrivilege",
@@ -217,39 +180,8 @@ namespace GPOops
         }
 
 
-    //int i = 0;
-    //foreach(string x in arrayService)
-    //{
-    //    if (i == 0)
-    //    {
-    //        serviceName = arrayService[i];
-    //    }
-    //    if (i == 1)
-    //    {
-    //        serviceStatus = arrayService[i];
-    //        if (serviceStatus == "2")
-    //        {
-    //            serviceStatus = "Enabled";
-    //        }
-    //        else if (serviceStatus == "3")
-    //        {
-    //            serviceStatus = "Installed";
-    //        }
-    //        else if (serviceStatus == "4")
-    //        {
-    //            serviceStatus = "Disabled";
-    //        }
-    //    }
-    //    i = i + 1;
-    //}
-    //return 
-
         public static void GPTAnalyze(string clsid, string filepath)
         {
-            //Dictionary<string, string> entry = new Dictionary<string, string>
-            //{
-            //    ["clsid"] = clsid
-            //};
             string[] services = new string[] { "WebClient", "EFS", "Spool" };
 
             if (FileExists(filepath))
@@ -280,64 +212,21 @@ namespace GPOops
                 string gptlocation = uri + "\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\Gpttmpl.inf";
                 string grouplocation = uri + "\\Machine\\Preferences\\Groups\\Groups.xml";
 
-                GPTAnalyze(CLSID, gptlocation);
+                                }
+                if (arg.Equals("-FolderContents", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("[!] Will copy folder entire contents ");
+                    //mordavid;
+                }
+                else
+                {
+                    GPTAnalyze(CLSID, gptlocation);
+                }
+            
 
 
                 //string servicesxml = uri + "\\MACHINE\\Preferences\\Services\\Services.xml";
                 //string scheduledtasklocation = uri + "\\Machine\\Preferences\\ScheduledTasks\\ScheduledTasks.xml";
-
-                //Tivdoki(gptlocation);
-                //Tivdoki(grouplocation);
-
-                //if (FileExists(gptlocation))
-                //{
-                //    Console.WriteLine("[*] Analyzing gpttmpl.inf in: " + gptlocation);
-                //    try
-                //    {
-                //        string text = ReadFile(gptlocation);
-                //    }
-                //    catch (Exception ex)
-                //    {
-                //        Console.WriteLine("[X] Cannot analyze. " + ex);
-                //    }
-                //    //bool GptTMPLSuccess = GptTMPL(gptlocation);
-                //    //    if (GptTMPLSuccess == false)
-                //    //    {
-                //    //        Console.WriteLine("[X] Can't analyze the GptTmpl.inf");
-                //    //        return;
-                //    //    }
-                //    //    else { Console.WriteLine("[+] Read it successfully"); }
-                //}
-                //else { Console.WriteLine("[X] cannot find the gpttmpl.inf file"); }
-
-                ////if (FileExists(grouplocation))
-                ////{
-                ////    Console.WriteLine("[*] Analyzing Groups.xml in: " + grouplocation);
-                ////    try
-                ////    {
-                ////        string text = ReadFile(grouplocation);
-                ////    }
-                ////    catch (Exception ex)
-                ////    {
-                ////        Console.WriteLine("[X] Cannot analyze. " + ex);
-                ////    }
-                ////}
-                ////else { Console.WriteLine("[X] cant find the Groups.xml file"); }
-
-                ////if (FileExists(grouplocation))
-                ////{
-                ////    Console.WriteLine("[*] Analyzing Groups.xml in: " + grouplocation);
-                ////    try
-                ////    {
-                ////        string text = ReadFile(grouplocation);
-                ////    }
-                ////    catch (Exception ex)
-                ////    {
-                ////        Console.WriteLine("[X] Cannot analyze. " + ex);
-                ////    }
-                ////}
-                ////else { Console.WriteLine("[X] cant find the Groups.xml file"); }
-
             }
         }
 
@@ -494,7 +383,6 @@ namespace GPOops
                     debugMode = true;
                     Console.WriteLine("[!] Debug Mode is on");
                     break;
-                }
             }
 
 
