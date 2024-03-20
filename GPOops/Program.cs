@@ -383,6 +383,7 @@ namespace GPOops
                     debugMode = true;
                     Console.WriteLine("[!] Debug Mode is on");
                     break;
+                }
             }
 
 
