@@ -1,26 +1,24 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using System.DirectoryServices;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Text.RegularExpressions;
 using System.DirectoryServices.ActiveDirectory;
-using System.Security.Policy;
-using System.Security.Claims;
 using System.IO;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Security.Cryptography;
-using static GPOops.Program;
-using System.Xml;
 using Formatting = Newtonsoft.Json.Formatting;
 
 namespace GPOops
 {
     class Program
     {
+        private static bool debugMode = false;
+        static void DebugLine(string message)
+        {
+            if (debugMode)
+            {
+                Console.WriteLine(message);
+            }
+        }
         public static List<string> gPLinksList = new List<string>();
         public static Dictionary<string, List<ServiceInfo>> clsidServices = new Dictionary<string, List<ServiceInfo>>();
         public static string GetGPOFromOU(string input)
@@ -48,21 +46,22 @@ namespace GPOops
         }
         static string ConstructUri(string clsid, string domain)
         {
-            Console.WriteLine("[*] Constructing URI");
+            //Console.WriteLine("[*] Constructing URI");
+            DebugLine("[*] Constructing URI");
             // Construct the URI using the provided CLSID and domain
             return @"\\" + domain + @"\sysvol\" + domain + @"\Policies\{" + clsid + "}";
             //MACHINE\Microsoft\Windows NT\SecEdit
         }
         public static bool FileExists(string filePath)
         {
-            Console.WriteLine("[*] Checking if file exists");
+            DebugLine("[*] Checking if file exists");
             return File.Exists(filePath);
         }
         public static string[] ReadFile(string filePath)
         {
             try
             {
-                Console.WriteLine("[*] Reading File ");
+                DebugLine("[*] Reading File ");
                 string[] content = File.ReadAllLines(filePath);
                 return content;
             }
@@ -213,7 +212,7 @@ namespace GPOops
                 }
                 clsidServices[clsid].Add(serviceInfo);
             }
-            Console.WriteLine(serviceInfo.ServiceName + " is " + serviceInfo.ServiceStatus);
+            DebugLine(serviceInfo.ServiceName + " is " + serviceInfo.ServiceStatus);
             return serviceInfo;
         }
 
@@ -245,7 +244,7 @@ namespace GPOops
     //}
     //return 
 
-    public static void GPTAnalyze(string clsid, string filepath)
+        public static void GPTAnalyze(string clsid, string filepath)
         {
             //Dictionary<string, string> entry = new Dictionary<string, string>
             //{
@@ -264,7 +263,7 @@ namespace GPOops
                         {
                             //var Status = ServiceParse(line);
                             ServiceInfo serviceInfo = ServiceParse(clsid,line);                        
-                            Console.WriteLine(serviceInfo.ServiceName + " is " + serviceInfo.ServiceStatus);
+                            DebugLine(serviceInfo.ServiceName + " is " + serviceInfo.ServiceStatus);
                         }
                 }
             }
@@ -346,9 +345,9 @@ namespace GPOops
         { //Add GetDomainContext - to be able to run with alternate credentials and extract context from session (runas)
             try
             {
-                Console.WriteLine("Getting current domain...");
+                DebugLine("[+] Getting current domain context");
                 Domain domainName = Domain.GetCurrentDomain(); //current domain context
-                Console.WriteLine("Domain obtained: " + domainName?.Name);
+                Console.WriteLine("[+] Domain obtained: " + domainName?.Name);
                 return domainName.Name;
             }
             catch (Exception ex)
@@ -360,16 +359,26 @@ namespace GPOops
 
         public static string GetCurrentDomainPath4LDAP()
         {
-            try
+            string ldapConnectionString;
+            string defaultNamingContext = new DirectoryEntry("LDAP://RootDSE").Properties["defaultNamingContext"][0].ToString();
+            if (defaultNamingContext != null || !defaultNamingContext.ToLower().Contains("workgroup"))
             {
-                Console.WriteLine("Getting current domain from local machine...");
-                string LdapConnectionString = (new DirectoryEntry("LDAP://RootDSE")).Properties["defaultNamingContext"][0].ToString();
-                return "LDAP://" + LdapConnectionString;
+                ldapConnectionString = "LDAP://" + defaultNamingContext;
+                DebugLine("[+] Domain via Default Naming Context: " + ldapConnectionString);
+                return ldapConnectionString;
             }
-            catch (Exception ex)
+            else
             {
-                Console.WriteLine("An error occurred on GetCurrentDomainPath4LDAP: " + ex.Message);
-                return ex.Message;
+                // Prompt the user for the domain controller address
+                Console.WriteLine("[!] Unable to dynamically discover the naming context. Is the computer domain joined? ");
+                Console.Write("Please enter the domain FQDN (e.g., example.com): ");
+                string domainFQDN = Console.ReadLine();
+                // derive the DN from the FQDN
+                string[] domainParts = domainFQDN.Split('.');
+                string distinguishedName = string.Join(",", Array.ConvertAll(domainParts, part => $"DC={part}"));
+                ldapConnectionString = $"LDAP://{distinguishedName}";
+                Console.WriteLine("Using provided information: " + ldapConnectionString);
+                return ldapConnectionString;
             }
         }
 
@@ -378,10 +387,10 @@ namespace GPOops
             gPLinksList.Clear(); //clear the list before populatingush
             try
             {
-                Console.WriteLine("Connecting to domain: " + LDAPdomain);
+                DebugLine("[+] Connecting to domain: " + LDAPdomain);
                 // Set up LDAP connection to Active Directory
                 DirectoryEntry entry = new DirectoryEntry(LDAPdomain);
-                Console.WriteLine("LDAP connection established.");
+                DebugLine("[+] LDAP connection established.");
                 DirectorySearcher searcher = new DirectorySearcher(entry);
 
                 // Set up search filter to find all Group Policy Objects
@@ -389,26 +398,26 @@ namespace GPOops
                 searcher.Filter = "(gPLink=*CN*)";
 
                 // Perform the search
-                Console.WriteLine("Searching for Group Policy Objects...");
+                DebugLine("[+] Searching for Group Policy Objects...");
                 SearchResultCollection results = searcher.FindAll();
-                Console.WriteLine("Search completed. Total results: " + results.Count);
+                Console.WriteLine("[+] Search completed. Total results: " + results.Count);
 
                 // Iterate through the search results
                 foreach (SearchResult result in results)
                 {
-                    Console.WriteLine("------- GPO ------");
+                    DebugLine("------- GPO ------");
                     // Retrieve the name of the OU
                     ResultPropertyValueCollection ous = result.Properties["ou"];
-                    Console.WriteLine("OUs:");
+                    DebugLine("OUs:");
                     foreach (var ou in ous)
                     {
-                        Console.WriteLine(ou);
+                        DebugLine(ou.ToString());
                     }
-                    Console.WriteLine("Linked-GPO CLSID:");
+                    DebugLine("Linked-GPO CLSID:");
                     ResultPropertyValueCollection gPLinks = result.Properties["gPLink"]; //Need to save gPLinks into list to use later
                     foreach (var gp in gPLinks)
                     {
-                        Console.WriteLine(GetGPOFromOU(gp.ToString().ToUpper()));
+                        DebugLine(GetGPOFromOU(gp.ToString().ToUpper()));
                         gPLinksList.Add(GetGPOFromOU(gp.ToString().ToUpper()));
                     }
                 }
@@ -450,15 +459,52 @@ namespace GPOops
 
         static void Main(string[] args)
         {
-            Console.WriteLine("BANNER\n");
+
+            Console.WriteLine(@"
+       (   )
+    (   ) (
+     ) _   )
+      ( \_
+    _(_\ \)__
+   / _  \___))
+  / /     \ \
+ / /       \ \
+/ / ¯\_(ツ)_/¯\ \
+\ \           / /
+ \_\         /_/
+    \_______/
+");
+
+            Console.WriteLine(@"
+  ▄████  ██▓███   ▒█████   ▒█████   ██▓███    ██████ 
+ ██▒ ▀█▒▓██░  ██▒▒██▒  ██▒▒██▒  ██▒▓██░  ██▒▒██    ▒ 
+▒██░▄▄▄░▓██░ ██▓▒▒██░  ██▒▒██░  ██▒▓██░ ██▓▒░ ▓██▄   
+░▓█  ██▓▒██▄█▓▒ ▒▒██   ██░▒██   ██░▒██▄█▓▒ ▒  ▒   ██▒
+░▒▓███▀▒▒██▒ ░  ░░ ████▓▒░░ ████▓▒░▒██▒ ░  ░▒██████▒▒
+ ░▒   ▒ ▒▓▒░ ░  ░░ ▒░▒░▒░ ░ ▒░▒░▒░ ▒▓▒░ ░  ░▒ ▒▓▒ ▒ ░
+  ░   ░ ░▒ ░       ░ ▒ ▒░   ░ ▒ ▒░ ░▒ ░     ░ ░▒  ░ ░
+░ ░   ░ ░░       ░ ░ ░ ▒  ░ ░ ░ ▒  ░░       ░  ░  ░  
+      ░              ░ ░      ░ ░                 ░  
+                                                     
+");
+            foreach (var arg in args)
+            {
+                if (arg.Equals("-debug", StringComparison.OrdinalIgnoreCase))
+                {
+                    debugMode = true;
+                    Console.WriteLine("[!] Debug Mode is on");
+                    break;
+                }
+            }
+
+
             string LDAPdomain = GetCurrentDomainPath4LDAP();
             string domain = GetCurrentDomainPathViaContext();
             GetOUEnabled(LDAPdomain);
-            Console.WriteLine("Finished main - going for your mom and trying SYSVOL boiz");
             AccessSYSVOL(domain);
             string jsonOutput = JsonConvert.SerializeObject(clsidServices, Formatting.Indented);
             File.WriteAllText("Services.json", jsonOutput);
-            Console.WriteLine(jsonOutput);
+            Console.WriteLine("[!] JSON output: \n" + jsonOutput);
         }
     }
 
