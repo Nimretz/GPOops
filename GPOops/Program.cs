@@ -61,7 +61,7 @@ namespace GPOops
         {
             try
             {
-                DebugLine("[*] Reading File ");
+                DebugLine("[*] Reading File " + filepath);
                 string[] content = File.ReadAllLines(filePath);
                 return content;
             }
