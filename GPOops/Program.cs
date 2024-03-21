@@ -6,12 +6,14 @@ using System.Text.RegularExpressions;
 using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using Formatting = Newtonsoft.Json.Formatting;
+using System.IO.Compression;
 
 namespace GPOops
 {
     class Program
     {
         private static bool debugMode = false;
+        private static bool folderMode = false;
         static void DebugLine(string message)
         {
             if (debugMode)
@@ -61,7 +63,7 @@ namespace GPOops
         {
             try
             {
-                DebugLine("[*] Reading File " + filepath);
+                DebugLine("[*] Reading File " + filePath);
                 string[] content = File.ReadAllLines(filePath);
                 return content;
             }
@@ -179,7 +181,6 @@ namespace GPOops
             return serviceInfo;
         }
 
-
         public static void GPTAnalyze(string clsid, string filepath)
         {
             string[] services = new string[] { "WebClient", "EFS", "Spool" };
@@ -194,7 +195,7 @@ namespace GPOops
                         if (line.Contains(keywordService))
                         {
                             //var Status = ServiceParse(line);
-                            ServiceInfo serviceInfo = ServiceParse(clsid,line);                        
+                            ServiceInfo serviceInfo = ServiceParse(clsid, line);
                             DebugLine(serviceInfo.ServiceName + " is " + serviceInfo.ServiceStatus);
                         }
                 }
@@ -211,23 +212,22 @@ namespace GPOops
                 // files locations
                 string gptlocation = uri + "\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\Gpttmpl.inf";
                 string grouplocation = uri + "\\Machine\\Preferences\\Groups\\Groups.xml";
-
-                                }
-                if (arg.Equals("-FolderContents", StringComparison.OrdinalIgnoreCase))
+                if (folderMode == true)
                 {
-                    Console.WriteLine("[!] Will copy folder entire contents ");
-                    //mordavid;
+                    string destinationDirectory = @"GPOs\{" + CLSID + "}";
+                    CopyDirectory(uri, destinationDirectory);
                 }
                 else
                 {
                     GPTAnalyze(CLSID, gptlocation);
                 }
-            
 
-
-                //string servicesxml = uri + "\\MACHINE\\Preferences\\Services\\Services.xml";
-                //string scheduledtasklocation = uri + "\\Machine\\Preferences\\ScheduledTasks\\ScheduledTasks.xml";
             }
+
+
+
+            //string servicesxml = uri + "\\MACHINE\\Preferences\\Services\\Services.xml";
+            //string scheduledtasklocation = uri + "\\Machine\\Preferences\\ScheduledTasks\\ScheduledTasks.xml";
         }
 
         public static string GetCurrentDomainPathViaContext()
@@ -346,58 +346,115 @@ namespace GPOops
             }
         }
 
+
+        static void CopyDirectory(string sourceDir, string destDir)
+        {
+            // Get the subdirectories for the specified directory.
+            DirectoryInfo dir = new DirectoryInfo(sourceDir);
+
+            if (!dir.Exists)
+            {
+                throw new DirectoryNotFoundException("Source directory does not exist or could not be found: " + sourceDir);
+            }
+
+            DirectoryInfo[] dirs = dir.GetDirectories();
+            // If the destination directory doesn't exist, create it.
+            if (!Directory.Exists(destDir))
+            {
+                Directory.CreateDirectory(destDir);
+            }
+            // Get the files in the directory and copy them to the new location.
+            FileInfo[] files = dir.GetFiles();
+            foreach (FileInfo file in files)
+            {
+                string tempPath = Path.Combine(destDir, file.Name);
+                file.CopyTo(tempPath, true);
+            }
+            // Recursively copy subdirectories and their contents.
+            foreach (DirectoryInfo subdir in dirs)
+            {
+                string tempPath = Path.Combine(destDir, subdir.Name);
+                CopyDirectory(subdir.FullName, tempPath);
+            }
+        }
         static void Main(string[] args)
         {
 
             Console.WriteLine(@"
-       (   )
-    (   ) (
-     ) _   )
-      ( \_
-    _(_\ \)__
-   / _  \___))
-  / /     \ \
- / /       \ \
-/ / ¯\_(ツ)_/¯\ \
-\ \           / /
- \_\         /_/
-    \_______/
-");
+           (   )
+        (   ) (
+         ) _   )
+          ( \_
+        _(_\ \)__
+       / _  \___))
+      / /     \ \
+     / /       \ \
+    / / ¯\_(ツ)_/¯\ \
+    \ \           / /
+     \_\         /_/
+        \_______/
+    ");
 
             Console.WriteLine(@"
-  ▄████  ██▓███   ▒█████   ▒█████   ██▓███    ██████ 
- ██▒ ▀█▒▓██░  ██▒▒██▒  ██▒▒██▒  ██▒▓██░  ██▒▒██    ▒ 
-▒██░▄▄▄░▓██░ ██▓▒▒██░  ██▒▒██░  ██▒▓██░ ██▓▒░ ▓██▄   
-░▓█  ██▓▒██▄█▓▒ ▒▒██   ██░▒██   ██░▒██▄█▓▒ ▒  ▒   ██▒
-░▒▓███▀▒▒██▒ ░  ░░ ████▓▒░░ ████▓▒░▒██▒ ░  ░▒██████▒▒
- ░▒   ▒ ▒▓▒░ ░  ░░ ▒░▒░▒░ ░ ▒░▒░▒░ ▒▓▒░ ░  ░▒ ▒▓▒ ▒ ░
-  ░   ░ ░▒ ░       ░ ▒ ▒░   ░ ▒ ▒░ ░▒ ░     ░ ░▒  ░ ░
-░ ░   ░ ░░       ░ ░ ░ ▒  ░ ░ ░ ▒  ░░       ░  ░  ░  
-      ░              ░ ░      ░ ░                 ░  
+      ▄████  ██▓███   ▒█████   ▒█████   ██▓███    ██████ 
+     ██▒ ▀█▒▓██░  ██▒▒██▒  ██▒▒██▒  ██▒▓██░  ██▒▒██    ▒ 
+    ▒██░▄▄▄░▓██░ ██▓▒▒██░  ██▒▒██░  ██▒▓██░ ██▓▒░ ▓██▄   
+    ░▓█  ██▓▒██▄█▓▒ ▒▒██   ██░▒██   ██░▒██▄█▓▒ ▒  ▒   ██▒
+    ░▒▓███▀▒▒██▒ ░  ░░ ████▓▒░░ ████▓▒░▒██▒ ░  ░▒██████▒▒
+     ░▒   ▒ ▒▓▒░ ░  ░░ ▒░▒░▒░ ░ ▒░▒░▒░ ▒▓▒░ ░  ░▒ ▒▓▒ ▒ ░
+      ░   ░ ░▒ ░       ░ ▒ ▒░   ░ ▒ ▒░ ░▒ ░     ░ ░▒  ░ ░
+    ░ ░   ░ ░░       ░ ░ ░ ▒  ░ ░ ░ ▒  ░░       ░  ░  ░  
+          ░              ░ ░      ░ ░                 ░  
                                                      
-");
+    ");
             foreach (var arg in args)
             {
                 if (arg.Equals("-debug", StringComparison.OrdinalIgnoreCase))
                 {
                     debugMode = true;
                     Console.WriteLine("[!] Debug Mode is on");
+                    continue;
+                }
+                if (arg.Equals("-folders", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("[!] Collecting entire GPO folders, will be saved under GPOs folder");
+                    if (!Directory.Exists("GPOs"))
+                    {
+                        Directory.CreateDirectory("GPOs");
+                    }
+                    folderMode = true;
                     break;
                 }
             }
-
 
             string LDAPdomain = GetCurrentDomainPath4LDAP();
             string domain = GetCurrentDomainPathViaContext();
             GetOUEnabled(LDAPdomain);
             AccessSYSVOL(domain);
-            string jsonOutput = JsonConvert.SerializeObject(clsidServices, Formatting.Indented);
-            File.WriteAllText("Services.json", jsonOutput);
-            Console.WriteLine("[!] JSON output: \n" + jsonOutput);
-        }
-    }
 
-    internal class CLSID
-    {
+            try
+            {
+                ZipFile.CreateFromDirectory(@"GPOs", "GPOs.zip");
+                Console.WriteLine("ZIP archive created successfully.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"An error occurred while creating the ZIP archive: {e.Message}");
+            }
+            if (folderMode == true)
+            {
+                Console.WriteLine("[!] Thats a thicc ass boi");
+            }
+            else
+            {
+                string jsonOutput = JsonConvert.SerializeObject(clsidServices, Formatting.Indented);
+                File.WriteAllText("Services.json", jsonOutput);
+                Console.WriteLine("[!] JSON output: \n" + jsonOutput);
+            }
+        }
+
+        internal class CLSID
+        {
+        }
     }
 }
