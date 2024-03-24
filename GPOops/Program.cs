@@ -14,6 +14,7 @@ namespace GPOops
     {
         private static bool debugMode = false;
         private static bool folderMode = false;
+        private static bool CollectServices = false;
         static void DebugLine(string message)
         {
             if (debugMode)
@@ -23,6 +24,7 @@ namespace GPOops
         }
         public static List<string> gPLinksList = new List<string>();
         public static Dictionary<string, List<ServiceInfo>> clsidServices = new Dictionary<string, List<ServiceInfo>>();
+        
         public static string GetGPOFromOU(string input)
         {
             string pattern = @"CN\={(.*?)}\,";
@@ -49,7 +51,7 @@ namespace GPOops
         static string ConstructUri(string clsid, string domain)
         {
             //Console.WriteLine("[*] Constructing URI");
-            DebugLine("[*] Constructing URI");
+            DebugLine("[*] Constructing URI for: "+ domain +"," +clsid);
             // Construct the URI using the provided CLSID and domain
             return @"\\" + domain + @"\sysvol\" + domain + @"\Policies\{" + clsid + "}";
             //MACHINE\Microsoft\Windows NT\SecEdit
@@ -201,25 +203,38 @@ namespace GPOops
                 }
             }
         }
-        public static void AccessSYSVOL(string domain)
+        public static void AccessSYSVOL(string domain,string outputPath)
         {
             // string uri =  "\\\\" + domain + "\\sysvol\\" + domain + "\\Policies";
             foreach (string CLSID in gPLinksList)
             {
                 // Construct SYSVOL Location
                 string uri = ConstructUri(CLSID, domain);
+                DebugLine($"Processing CLSID: {CLSID}");
 
                 // files locations
                 string gptlocation = uri + "\\MACHINE\\Microsoft\\Windows NT\\SecEdit\\Gpttmpl.inf";
                 string grouplocation = uri + "\\Machine\\Preferences\\Groups\\Groups.xml";
-                if (folderMode == true)
+                if (folderMode)
                 {
-                    string destinationDirectory = @"GPOs\{" + CLSID + "}";
+                    //string destinationDirectory = @"GPOs\{" + CLSID + "}";
+                    string destinationDirectory = Path.Combine(outputPath, "GPOs", "{" + CLSID + "}");
                     CopyDirectory(uri, destinationDirectory);
                 }
                 else
                 {
+                    DebugLine("[!] FolderMode not enabled");
+                }
+
+                if (CollectServices)
+                {
+                    DebugLine($"Analyzing with GPTAnalyze: {gptlocation}");
                     GPTAnalyze(CLSID, gptlocation);
+                    DebugLine($"Analysis complete for: {CLSID}");
+                }
+                else
+                {
+                    DebugLine("[!] CollectServices not enabled");
                 }
 
             }
@@ -350,6 +365,7 @@ namespace GPOops
         static void CopyDirectory(string sourceDir, string destDir)
         {
             // Get the subdirectories for the specified directory.
+            string DestDirush = Path.Combine(destDir, "GPOs");
             DirectoryInfo dir = new DirectoryInfo(sourceDir);
 
             if (!dir.Exists)
@@ -359,23 +375,55 @@ namespace GPOops
 
             DirectoryInfo[] dirs = dir.GetDirectories();
             // If the destination directory doesn't exist, create it.
-            if (!Directory.Exists(destDir))
+            if (!Directory.Exists(DestDirush))
             {
-                Directory.CreateDirectory(destDir);
+                Directory.CreateDirectory(DestDirush);
             }
             // Get the files in the directory and copy them to the new location.
             FileInfo[] files = dir.GetFiles();
             foreach (FileInfo file in files)
             {
-                string tempPath = Path.Combine(destDir, file.Name);
+                string tempPath = Path.Combine(DestDirush, file.Name);
                 file.CopyTo(tempPath, true);
             }
             // Recursively copy subdirectories and their contents.
             foreach (DirectoryInfo subdir in dirs)
             {
-                string tempPath = Path.Combine(destDir, subdir.Name);
+                string tempPath = Path.Combine(DestDirush, subdir.Name);
                 CopyDirectory(subdir.FullName, tempPath);
             }
+        }
+        static void Zippiel(string outputPath)
+        {
+            try
+            {
+                string sourceDirectory = Path.Combine(outputPath, "GPOs");
+                string zipFilePath = Path.Combine(outputPath, "GPOs.zip");
+
+                if (File.Exists(zipFilePath))
+                {
+                    Console.WriteLine("[!] GPOs.zip already exists. Attempting to create a new archive.");
+                    zipFilePath = Path.Combine(outputPath, "GPOs_" + DateTime.Now.ToString("yyyyMMddHHmmss") + ".zip");
+                }
+
+                ZipFile.CreateFromDirectory(sourceDirectory, zipFilePath);
+                Console.WriteLine($"[!] {Path.GetFileName(zipFilePath)} archive created successfully.");
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"[!] An error occurred while creating the ZIP archive: {e.Message}");
+            }
+        }
+
+        static void DisplayHelpMessage()
+        {
+            Console.WriteLine("Usage: GPOops.exe [options]");
+            Console.WriteLine("Options:");
+            Console.WriteLine("  --help, -h, /?\tShow this help message and exit.");
+            Console.WriteLine("  --debug, -d\t\tEnable debug mode.");
+            Console.WriteLine("  --services, -s\t\tCollect Services from GPO.");
+            Console.WriteLine("  --folders, -f\t\tCollect entire GPO folders, will be saved under GPOs folder.");
+            Console.WriteLine("  --output, -o\t\tSave output to folder.");
         }
         static void Main(string[] args)
         {
@@ -407,49 +455,69 @@ namespace GPOops
           ░              ░ ░      ░ ░                 ░  
                                                      
     ");
-            foreach (var arg in args)
+            string outputPath = "bababooei";
+            for (int i = 0; i < args.Length; i++)
             {
-                if (arg.Equals("-debug", StringComparison.OrdinalIgnoreCase))
+                var arg = args[i];
+                switch (arg.ToLower())
                 {
-                    debugMode = true;
-                    Console.WriteLine("[!] Debug Mode is on");
-                    continue;
+                    case "--help":
+                    case "-h":
+                    case "/?":
+                        DisplayHelpMessage();
+                        return;
+                    case "--debug":
+                    case "-d":
+                        debugMode = true;
+                        Console.WriteLine("[!] Debug Mode is on");
+                        break;
+                    case "-output":
+                    case "-o":
+                        if (i + 1 < args.Length)
+                        {
+                            outputPath = args[++i];
+                            Console.WriteLine($"[!] Output will be saved to: {outputPath}");
+                        }
+                        else
+                        {
+                            Console.WriteLine("Error: --output requires a path argument.");
+                            return;
+                        }
+                        break;
+                    case "--folders":
+                    case "-f":
+                        folderMode = true;
+                        Console.WriteLine("[!] Folder mode activated.");
+                        break;
+                    case "--services":
+                    case "-s":
+                        CollectServices = true;
+                        Console.WriteLine("[!] Service collection mode activated.");
+                        break;
                 }
-                if (arg.Equals("-folders", StringComparison.OrdinalIgnoreCase))
-                {
-                    Console.WriteLine("[!] Collecting entire GPO folders, will be saved under GPOs folder");
-                    if (!Directory.Exists("GPOs"))
-                    {
-                        Directory.CreateDirectory("GPOs");
-                    }
-                    folderMode = true;
-                    break;
-                }
+            }
+
+            string gpoDirectoryPath = Path.Combine(outputPath, "GPOs");
+            if (!Directory.Exists(gpoDirectoryPath))
+            {
+                Directory.CreateDirectory(gpoDirectoryPath);
             }
 
             string LDAPdomain = GetCurrentDomainPath4LDAP();
             string domain = GetCurrentDomainPathViaContext();
             GetOUEnabled(LDAPdomain);
-            AccessSYSVOL(domain);
+            AccessSYSVOL(domain, outputPath);
 
-            try
+            if (folderMode)
             {
-                ZipFile.CreateFromDirectory(@"GPOs", "GPOs.zip");
-                Console.WriteLine("ZIP archive created successfully.");
+                Zippiel(outputPath);
             }
-            catch (Exception e)
-            {
-                Console.WriteLine($"An error occurred while creating the ZIP archive: {e.Message}");
-            }
-            if (folderMode == true)
-            {
-                Console.WriteLine("[!] Thats a thicc ass boi");
-            }
-            else
+
+            if (CollectServices)
             {
                 string jsonOutput = JsonConvert.SerializeObject(clsidServices, Formatting.Indented);
-                File.WriteAllText("Services.json", jsonOutput);
-                Console.WriteLine("[!] JSON output: \n" + jsonOutput);
+                File.WriteAllText(Path.Combine(gpoDirectoryPath, "Services.json"), jsonOutput);
+                Console.WriteLine("[!] JSON output saved to Services.json: \n" + jsonOutput);
             }
         }
 
