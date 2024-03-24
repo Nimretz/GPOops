@@ -15,6 +15,7 @@ namespace GPOops
         private static bool debugMode = false;
         private static bool folderMode = false;
         private static bool CollectServices = false;
+        private static bool deletus = false;
         static void DebugLine(string message)
         {
             if (debugMode)
@@ -374,19 +375,16 @@ namespace GPOops
             }
 
             DirectoryInfo[] dirs = dir.GetDirectories();
-            // If the destination directory doesn't exist, create it.
             if (!Directory.Exists(DestDirush))
             {
                 Directory.CreateDirectory(DestDirush);
             }
-            // Get the files in the directory and copy them to the new location.
             FileInfo[] files = dir.GetFiles();
             foreach (FileInfo file in files)
             {
                 string tempPath = Path.Combine(DestDirush, file.Name);
                 file.CopyTo(tempPath, true);
             }
-            // Recursively copy subdirectories and their contents.
             foreach (DirectoryInfo subdir in dirs)
             {
                 string tempPath = Path.Combine(DestDirush, subdir.Name);
@@ -502,6 +500,12 @@ namespace GPOops
             {
                 Directory.CreateDirectory(gpoDirectoryPath);
             }
+            else
+            {
+                Console.WriteLine(gpoDirectoryPath+ " Directory Exists, will not delete");
+                deletus = true;
+
+            }
 
             string LDAPdomain = GetCurrentDomainPath4LDAP();
             string domain = GetCurrentDomainPathViaContext();
@@ -512,12 +516,16 @@ namespace GPOops
             {
                 Zippiel(outputPath);
             }
-
             if (CollectServices)
             {
                 string jsonOutput = JsonConvert.SerializeObject(clsidServices, Formatting.Indented);
                 File.WriteAllText(Path.Combine(gpoDirectoryPath, "Services.json"), jsonOutput);
-                Console.WriteLine("[!] JSON output saved to Services.json: \n" + jsonOutput);
+                Console.WriteLine("[*] JSON output saved to Services.json: \n" + jsonOutput);
+                DebugLine("[!] JSON output saved to Services.json: \n" + jsonOutput);
+            }
+            if (!deletus)
+            {
+                Directory.Delete(gpoDirectoryPath, true);
             }
         }
 
