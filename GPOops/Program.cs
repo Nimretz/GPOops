@@ -418,7 +418,7 @@ namespace GPOops
             Console.WriteLine("Usage: GPOops.exe [options]");
             Console.WriteLine("Options:");
             Console.WriteLine("  --help, -h, /?\tShow this help message and exit.");
-            Console.WriteLine("  --debug, -d\t\tEnable debug mode.");
+            Console.WriteLine("  -debug\t\tEnable debug mode.");
             Console.WriteLine("  --services, -s\t\tCollect Services from GPO.");
             Console.WriteLine("  --folders, -f\t\tCollect entire GPO folders, will be saved under GPOs folder.");
             Console.WriteLine("  --output, -o\t\tSave output to folder.");
@@ -464,7 +464,7 @@ namespace GPOops
                     case "/?":
                         DisplayHelpMessage();
                         return;
-                    case "--debug":
+                    case "-debug":
                     case "-d":
                         debugMode = true;
                         Console.WriteLine("[!] Debug Mode is on");
