@@ -46,13 +46,13 @@ namespace GPOops
             }
             return "None";
         }
-        public static void ShowList(ResultPropertyValueCollection my_list)
-        {
-            foreach (var my_string in my_list)
-            {
-                Console.WriteLine(my_string.ToString());
-            }
-        }
+        //public static void ShowList(ResultPropertyValueCollection my_list)
+        //{
+        //    foreach (var my_string in my_list)
+        //    {
+        //        Console.WriteLine(my_string.ToString());
+        //    }
+        //}
         static string ConstructUri(string clsid, string domain)
         {
             //Console.WriteLine("[*] Constructing URI");
@@ -78,23 +78,6 @@ namespace GPOops
             {
                 Console.WriteLine($"Error reading file: {ex.Message}");
                 return null;
-            }
-        }
-
-        public static bool GptTMPLisExists(string filepath)
-        {
-            try
-            {
-                string[] text = ReadFile(filepath);
-                Console.WriteLine("[+] Read this from " + filepath);
-                Console.WriteLine(text);
-                //TODO analize
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("GptTMPL failed" + ex.ToString());
-                return false;
             }
         }
 
@@ -519,13 +502,13 @@ namespace GPOops
 
         static void DisplayHelpMessage()
         {
-            Console.WriteLine("Usage: GPOops.exe [options]");
+            Console.WriteLine("Usage: GPOops.exe [options] {-s -p -debug}");
             Console.WriteLine("Options:");
             Console.WriteLine("  --help, -h, /?\tShow this help message and exit.");
             Console.WriteLine("  -debug  \t\tEnable debug mode.");
             Console.WriteLine("  --services, -s\tCollect Services from GPO.");
             Console.WriteLine("  --folders, -f\t\tCollect entire GPO folders, will be saved under GPOs folder.");
-            Console.WriteLine("  --privileges, -p\t\tCollect interesting privileges and settings from GPO.");
+            Console.WriteLine("  --privileges, -p\tCollect interesting privileges and settings from GPO.");
             Console.WriteLine("  --output, -o\t\tSave output to folder.");
 
         }
@@ -560,6 +543,11 @@ namespace GPOops
                                                      
     ");
             string outputPath = "bababooei";
+            if (args.Length == 0) 
+            {
+                DisplayHelpMessage();
+                return;
+            }
             for (int i = 0; i < args.Length; i++)
             {
                 var arg = args[i];
@@ -633,7 +621,7 @@ namespace GPOops
                 Console.WriteLine("[*] JSON output saved to Services.json: \n" + jsonOutput);
                 DebugLine("[!] JSON output saved to Services.json: \n" + jsonOutput);
             }
-            if (!deletus)
+            if (!deletus && folderMode)
             {
                 Directory.Delete(gpoDirectoryPath, true);
             }
