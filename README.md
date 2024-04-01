@@ -1,9 +1,9 @@
 ## Usage
 ```
-GPOops.exe [-h][-d] {-s,-p,-f)
+GPOops.exe [-h][-debug] {-s,-p,-f)
 Options:
   --help, -h, /?        Show this help message and exit.
-  --debug, -d           Enable debug mode.
+  -debug                Enable debug mode.
   --services, -s        Collect Services from GPO.
   --folders, -f         Collect entire GPO folders, will be saved under GPOs folder.
   --privileges, -p      Collect interesting privileges and settings from GPO.
@@ -26,5 +26,6 @@ Loadiel.py Services.json
 
 ## TODOS:
 1. GPTAnalyze - finish the collection and parse of privilegs and LsaSettings. Add PasswordSettings. (should be combined with --services, to avoid opening the gpttmpl.inf)
+2. Zippiel bug -> GPOs folder created recursivley after each folder
 3. groups.xml analyze
 4. Loadiel.py - add privileges/lsasettings/password settings in bloodhound? in GPO attribute as well.
