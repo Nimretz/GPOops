@@ -467,10 +467,10 @@ namespace GPOops
         }
 
 
-        static void CopyDirectory(string sourceDir, string destDir)
+        static void CopyDirectory(string sourceDir, string DestDirush)
         {
             // Get the subdirectories for the specified directory.
-            string DestDirush = Path.Combine(destDir, "GPOs");
+            //string DestDirush = Path.Combine(destDir, "GPOs");
             DirectoryInfo dir = new DirectoryInfo(sourceDir);
 
             if (!dir.Exists)
