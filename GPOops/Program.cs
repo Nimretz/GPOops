@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Security.Principal;
 using Newtonsoft.Json;
 using System.DirectoryServices;
 using System.Text.RegularExpressions;
@@ -7,6 +8,7 @@ using System.DirectoryServices.ActiveDirectory;
 using System.IO;
 using Formatting = Newtonsoft.Json.Formatting;
 using System.IO.Compression;
+using static GPOops.Program;
 
 namespace GPOops
 {
@@ -15,6 +17,7 @@ namespace GPOops
         private static bool debugMode = false;
         private static bool folderMode = false;
         private static bool CollectServices = false;
+        private static bool CollectPrivileges = false;
         private static bool deletus = false;
         static void DebugLine(string message)
         {
@@ -24,6 +27,7 @@ namespace GPOops
             }
         }
         public static List<string> gPLinksList = new List<string>();
+        public static List<GPRight> gpRightsList = new List<GPRight>();
         public static Dictionary<string, List<ServiceInfo>> clsidServices = new Dictionary<string, List<ServiceInfo>>();
         
         public static string GetGPOFromOU(string input)
@@ -94,56 +98,55 @@ namespace GPOops
             }
         }
 
-        public static void GPTParsush(List<string> content)
+        public static void PrivilegesParse(string clsid, string filepath)
         {
-            string[] privileges = new string[] { "SeBackupPrivilege",
-                "SeCreateTokenPrivilege",
-                "SeDebugPrivilege",
-                "SeEnableDelegationPrivilege",
-                "SeSyncAgentPrivilege",
-                "SeTakeOwnershipPrivilege",
-                "SeTcbPrivilege",
-                "SeTrustedCredManAccessPrivilege", };
 
-            string[] PasswordSettings = new string[] {
-                "MinimumPasswordAge",
-                "MaximumPasswordAge",
-                "MinimumPasswordLength",
-                "PasswordComplexity",
-                "PasswordHistorySize",
-                "LockoutBadCount",
-                "ResetLockoutCount",
-                "LockoutDuration",
-                "RequireLogonToChangePassword",
-                "ClearTextPassword",
-            };
-            string[] LsaSettings = new string[] {
-                @"EveryoneIncludesAnonymous",
-                @"ForceGuest",
-                @"LimitBlankPasswordUse",
-                @"LmCompatibilityLevel",
-                //@"NTLMMinClientSec",
-                //@"NTLMMinServerSec",
-                @"NoLMHash",
-                @"RestrictAnonymous",
-                @"RestrictAnonymousSAM",
-            };
-            foreach (string skibidy in content)
-            {
-                Console.WriteLine(skibidy);
+            //foreach (string skibidy in content)
+            //{
+            //    Console.WriteLine(skibidy);
+            //    if (skibidy.StartsWith(@"MACHINE\System\CurrentControlSet\Control\Lsa\", StringComparison.InvariantCultureIgnoreCase))
+            //    {
+            //        skibidy.
+            //    }
+            //}
+            //if (FileExists(filepath))
+            //{
+            //    string[] content = ReadFile(filepath);
+            //    foreach (string line in content)
+            //    {
+            //        foreach (string privilege in privileges)
 
-            }
+            //            if (line.Contains(privilege))
+            //            {
+            //                //var Status = ServiceParse(line);
+            //                ServiceInfo serviceInfo = ServiceParse(clsid, line);
+            //                DebugLine(serviceInfo.ServiceName + " is " + serviceInfo.ServiceStatus);
+            //            }
+
+            //    }
+            //}
         }
 
-        public static void SIDtoNAME()
+        public static string SIDtoNAME(string sidString)
         {
-
+            SecurityIdentifier sid = new SecurityIdentifier(sidString);
+            NTAccount account = (NTAccount)sid.Translate(typeof(NTAccount));
+            DebugLine($"The SID {sidString} translates to the name {account.Value}");
+            return account.Value;
         }
         //public static string ServiceParse(string lineService)
         public class ServiceInfo
         {
             public string ServiceName { get; set; }
             public string ServiceStatus { get; set; }
+        }
+
+        public class GPRight
+        {
+            public string User { get; set; }
+            public string Privilege { get; set; }
+            //public string GPOName { get; set; }
+            public string CLSID { get; set; }
         }
 
         public static ServiceInfo ServiceParse(string clsid, string lineService)
@@ -187,20 +190,116 @@ namespace GPOops
         public static void GPTAnalyze(string clsid, string filepath)
         {
             string[] services = new string[] { "WebClient", "EFS", "Spool" };
+            string[] privileges = new string[] {
+                "SeBackupPrivilege",   //backup operators - read file system, if on dc can copy ntds.dit ?
+                "SeCreateTokenPrivilege",
+                "SeDebugPrivilege", //usually on dcs - if on workstation for auth users can give local admin
+                "SeEnableDelegationPrivilege",
+                "SeSyncAgentPrivilege", //dcsync rights
+                "SeTakeOwnershipPrivilege",
+                "SeTcbPrivilege",
+                "SeTrustedCredManAccessPrivilege", };
+
+            string[] PasswordSettings = new string[] {
+                "MinimumPasswordAge",
+                "MaximumPasswordAge",
+                "MinimumPasswordLength",
+                "PasswordComplexity",
+                "PasswordHistorySize",
+                "LockoutBadCount",
+                "ResetLockoutCount",
+                "LockoutDuration",
+                "RequireLogonToChangePassword",
+                "ClearTextPassword",
+            };
+            string[] LsaSettings = new string[] {
+                @"EveryoneIncludesAnonymous",
+                @"ForceGuest", 
+                @"LimitBlankPasswordUse",
+                @"LmCompatibilityLevel",
+                //@"NTLMMinClientSec",
+                //@"NTLMMinServerSec",
+                @"NoLMHash",
+                @"RestrictAnonymous",
+                @"RestrictAnonymousSAM",
+            };
 
             if (FileExists(filepath))
             {
                 string[] content = ReadFile(filepath);
                 foreach (string line in content)
                 {
-                    foreach (string keywordService in services)
+                    if (CollectServices)
+                    {
+                        foreach (string keywordService in services)
 
-                        if (line.Contains(keywordService))
-                        {
-                            //var Status = ServiceParse(line);
-                            ServiceInfo serviceInfo = ServiceParse(clsid, line);
-                            DebugLine(serviceInfo.ServiceName + " is " + serviceInfo.ServiceStatus);
-                        }
+                            if (line.Contains(keywordService))
+                            {
+                                //var Status = ServiceParse(line);
+                                ServiceInfo serviceInfo = ServiceParse(clsid, line);
+                                DebugLine(serviceInfo.ServiceName + " is " + serviceInfo.ServiceStatus);
+                            }
+                    }
+                    if (CollectPrivileges)
+                    {
+                        foreach (string privilege in privileges)
+
+                            if (line.StartsWith(privilege, StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                //var Status = ServiceParse(line);
+                                DebugLine(line);
+                                int pos = line.IndexOf('=') + 1;
+                                //Console.WriteLine(pos);
+                                if (pos > 1)
+                                {
+                                    string value = line.Substring(pos).Trim();
+                                    string[] values = value.Split(',');
+                                    foreach (string user in values)
+                                    {
+                                        // ignore empty privilege assignment
+                                        if (String.IsNullOrEmpty(user))
+                                            continue;
+                                        // ignore well known sid
+                                        // 
+                                        if (user.StartsWith("*S-1-5-32-", StringComparison.InvariantCultureIgnoreCase))
+                                        {
+                                            continue;
+                                        }
+                                        // Local system
+                                        if (user.StartsWith("*S-1-5-18", StringComparison.InvariantCultureIgnoreCase))
+                                        {
+                                            continue;
+                                        }
+                                        //GPRight right = new GPRight();
+                                        //GPRight.Add(right);
+                                        //right.GPOName = GPOName;
+                                        //right.Privilege = privilege;
+
+                                        //if (user.StartsWith("*S-1", StringComparison.InvariantCultureIgnoreCase))
+                                        //{
+                                        //    right.User = SIDtoNAME(sidString: user.Substring(1));
+                                        //}
+                                        //else
+                                        //{
+                                        //    right.User = user;
+                                        //}
+                                        GPRight right = new GPRight
+                                        {
+                                            //GPOName = "Your GPOName Here",
+                                            Privilege = privilege,
+                                            CLSID = clsid, 
+                                            User = user.StartsWith("*S-1", StringComparison.InvariantCultureIgnoreCase) ? SIDtoNAME(user.Substring(1)) : user
+                                        };
+
+                                        gpRightsList.Add(right);
+                                        Console.WriteLine("[!] "+ right.CLSID + "\n\t"+right.User+" has "+right.Privilege);
+
+                                    }
+                                }
+                            }
+                    }
+
+                                
                 }
             }
         }
@@ -227,7 +326,7 @@ namespace GPOops
                     DebugLine("[!] FolderMode not enabled");
                 }
 
-                if (CollectServices)
+                if (CollectServices || CollectPrivileges)
                 {
                     DebugLine($"Analyzing with GPTAnalyze: {gptlocation}");
                     GPTAnalyze(CLSID, gptlocation);
@@ -236,6 +335,11 @@ namespace GPOops
                 else
                 {
                     DebugLine("[!] CollectServices not enabled");
+                }
+                if (CollectPrivileges)
+                {
+                    //Collect privileges
+
                 }
 
             }
@@ -418,10 +522,12 @@ namespace GPOops
             Console.WriteLine("Usage: GPOops.exe [options]");
             Console.WriteLine("Options:");
             Console.WriteLine("  --help, -h, /?\tShow this help message and exit.");
-            Console.WriteLine("  -debug\t\tEnable debug mode.");
-            Console.WriteLine("  --services, -s\t\tCollect Services from GPO.");
+            Console.WriteLine("  -debug  \t\tEnable debug mode.");
+            Console.WriteLine("  --services, -s\tCollect Services from GPO.");
             Console.WriteLine("  --folders, -f\t\tCollect entire GPO folders, will be saved under GPOs folder.");
+            Console.WriteLine("  --privileges, -p\t\tCollect interesting privileges and settings from GPO.");
             Console.WriteLine("  --output, -o\t\tSave output to folder.");
+
         }
         static void Main(string[] args)
         {
@@ -465,7 +571,6 @@ namespace GPOops
                         DisplayHelpMessage();
                         return;
                     case "-debug":
-                    case "-d":
                         debugMode = true;
                         Console.WriteLine("[!] Debug Mode is on");
                         break;
@@ -491,6 +596,11 @@ namespace GPOops
                     case "-s":
                         CollectServices = true;
                         Console.WriteLine("[!] Service collection mode activated.");
+                        break;
+                    case "--privileges":
+                    case "-p":
+                        CollectPrivileges = true;
+                        Console.WriteLine("[!] Privileges collection mode activated.");
                         break;
                 }
             }
